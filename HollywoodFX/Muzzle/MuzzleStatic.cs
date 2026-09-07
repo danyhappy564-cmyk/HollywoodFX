@@ -33,9 +33,27 @@ internal class MuzzleStatic
     public readonly CurrentShot CurrentShot = new();
     private readonly Dictionary<int, MuzzleState> _muzzleStates = new();
 
-    private static readonly FieldInfo JetField = typeof(MuzzleManager).GetField("muzzleJet_0", BindingFlags.NonPublic | BindingFlags.Instance);
-    private static readonly FieldInfo FumeField = typeof(MuzzleManager).GetField("muzzleFume_0", BindingFlags.NonPublic | BindingFlags.Instance);
-    private static readonly FieldInfo SmokeField = typeof(MuzzleManager).GetField("muzzleSmoke_0", BindingFlags.NonPublic | BindingFlags.Instance);
+    // The _0 suffix is the obfuscator's, which means these names belong to a build of the
+    // game rather than to the game. Resolved through Field so a rename after an update
+    // says so once and leaves the muzzle plain, instead of throwing on every shot fired
+    // for the rest of the raid.
+    private static readonly FieldInfo JetField = Field("muzzleJet_0");
+    private static readonly FieldInfo FumeField = Field("muzzleFume_0");
+    private static readonly FieldInfo SmokeField = Field("muzzleSmoke_0");
+
+    private static FieldInfo Field(string name)
+    {
+        var field = typeof(MuzzleManager).GetField(name, BindingFlags.NonPublic | BindingFlags.Instance);
+
+        if (field == null)
+        {
+            Plugin.Log.LogError(
+                $"[HollywoodFX] MuzzleManager.{name} is gone in this build of the game, so muzzle "
+                + "effects are off. The name is the obfuscator's and moves when BSG changes the class.");
+        }
+
+        return field;
+    }
 
     public bool TryGetMuzzleState(MuzzleManager manager, out MuzzleState state)
     {
@@ -69,7 +87,7 @@ internal class MuzzleStatic
 
         var fireportDir = -1 * fireport.up;
 
-        if (FumeField.GetValue(manager) is not MuzzleFume[] fumes)
+        if (FumeField?.GetValue(manager) is not MuzzleFume[] fumes)
             return null;
 
         var managerId = manager.gameObject.transform.GetInstanceID();
@@ -113,7 +131,7 @@ internal class MuzzleStatic
         // Update the jets
         state.Jets.Clear();
 
-        if (JetField.GetValue(manager) is MuzzleJet[] jets)
+        if (JetField?.GetValue(manager) is MuzzleJet[] jets)
         {
             for (var i = 0; i < jets.Length; i++)
             {
@@ -127,7 +145,7 @@ internal class MuzzleStatic
         }
 
         // Update the smokes
-        state.Trails = SmokeField.GetValue(manager) as MuzzleSmoke[];
+        state.Trails = SmokeField?.GetValue(manager) as MuzzleSmoke[];
 
         return state;
     }

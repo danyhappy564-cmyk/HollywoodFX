@@ -6,70 +6,124 @@
         <LangVersion>default</LangVersion>
         <Deterministic>false</Deterministic>
         <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-        <!-- overridable per-machine with -p:SptRoot=... (or an SptRoot environment
-             variable) — this used to be a set of relative ..\..\..\Client_Dev paths
-             tied to the original author's own folder layout, so a checkout anywhere
-             else couldn't resolve the game assemblies at all. -->
-        <SptRoot Condition="'$(SptRoot)' == ''">E:\SPT 4.0.10</SptRoot>
+
+        <!-- The SPT install this is compiled against, overridable per machine with
+             -p:SptRoot=... or an SptRoot environment variable. It was a set of relative
+             ..\..\..\Client_Dev paths tied to the original author's folder layout, so a
+             checkout anywhere else could not resolve the game assemblies at all. -->
+        <SptRoot Condition="'$(SptRoot)' == ''">E:\SPT 4.1</SptRoot>
     </PropertyGroup>
 
+    <!--
+        Where the game and BepInEx actually are, found rather than assumed.
+
+        4.1 moved the server into an SPT_Runtime\ folder under the install. The game and
+        BepInEx normally stay at the root, because EscapeFromTarkov.exe has to sit beside
+        BepInEx for the loader to attach, but "normally" is not "always" and a wrong guess
+        here shows up as twenty unresolved references rather than one clear message.
+
+        So probe: the root first, then SPT_Runtime\, keyed on a file that has to be there
+        if that is the right folder. The two are resolved separately because there is no
+        rule that says they move together.
+
+        Point GameRoot or BepInExRoot straight at a folder to skip the search.
+    -->
+    <PropertyGroup>
+        <GameRoot Condition="'$(GameRoot)' == '' And Exists('$(SptRoot)\EscapeFromTarkov_Data\Managed\Assembly-CSharp.dll')">$(SptRoot)</GameRoot>
+        <GameRoot Condition="'$(GameRoot)' == '' And Exists('$(SptRoot)\SPT_Runtime\EscapeFromTarkov_Data\Managed\Assembly-CSharp.dll')">$(SptRoot)\SPT_Runtime</GameRoot>
+        <GameRoot Condition="'$(GameRoot)' == ''">$(SptRoot)</GameRoot>
+
+        <BepInExRoot Condition="'$(BepInExRoot)' == '' And Exists('$(SptRoot)\BepInEx\core\BepInEx.dll')">$(SptRoot)</BepInExRoot>
+        <BepInExRoot Condition="'$(BepInExRoot)' == '' And Exists('$(SptRoot)\SPT_Runtime\BepInEx\core\BepInEx.dll')">$(SptRoot)\SPT_Runtime</BepInExRoot>
+        <BepInExRoot Condition="'$(BepInExRoot)' == ''">$(GameRoot)</BepInExRoot>
+
+        <GameManaged>$(GameRoot)\EscapeFromTarkov_Data\Managed</GameManaged>
+        <BepInExCore>$(BepInExRoot)\BepInEx\core</BepInExCore>
+        <PluginsDir>$(BepInExRoot)\BepInEx\plugins</PluginsDir>
+        <SptPlugins>$(PluginsDir)\spt</SptPlugins>
+    </PropertyGroup>
+
+    <!--
+        Said once and plainly, before the compiler says it twenty times. Every reference
+        below hangs off these three folders, so one missing file means one wrong path and
+        not one bad reference.
+    -->
+    <Target Name="ValidateSptRoot" BeforeTargets="BeforeBuild">
+        <Error Condition="!Exists('$(GameManaged)\Assembly-CSharp.dll')"
+               Text="No Assembly-CSharp.dll under '$(GameManaged)'. SptRoot is '$(SptRoot)'; looked there and under SPT_Runtime\. Build with -p:SptRoot=&lt;your SPT install root&gt;, or -p:GameRoot=&lt;the folder holding EscapeFromTarkov_Data&gt;." />
+        <Error Condition="!Exists('$(BepInExCore)\BepInEx.dll')"
+               Text="No BepInEx.dll under '$(BepInExCore)'. SptRoot is '$(SptRoot)'. Build with -p:BepInExRoot=&lt;the folder holding BepInEx&gt;." />
+        <Error Condition="!Exists('$(SptPlugins)\spt-reflection.dll')"
+               Text="No spt-reflection.dll under '$(SptPlugins)'. This plugin patches through SPT's ModulePatch, so it has to be built against the install it will run on." />
+    </Target>
+
     <ItemGroup>
-      <Reference Include="0Harmony">
-      <HintPath>$(SptRoot)\BepInEx\core\0Harmony.dll</HintPath>
-    </Reference>
-    <Reference Include="Assembly-CSharp">
-      <HintPath>$(SptRoot)\EscapeFromTarkov_Data\Managed\Assembly-CSharp.dll</HintPath>
-    </Reference>
-    <Reference Include="BepInEx">
-      <HintPath>$(SptRoot)\BepInEx\core\BepInEx.dll</HintPath>
-    </Reference>
-    <Reference Include="Comfort">
-      <HintPath>$(SptRoot)\EscapeFromTarkov_Data\Managed\Comfort.dll</HintPath>
-    </Reference>
-    <Reference Include="Sirenix.Serialization">
-      <HintPath>$(SptRoot)\EscapeFromTarkov_Data\Managed\Sirenix.Serialization.dll</HintPath>
-    </Reference>
-    <Reference Include="spt-common">
-      <HintPath>$(SptRoot)\BepInEx\plugins\spt\spt-common.dll</HintPath>
-    </Reference>
-    <Reference Include="spt-core">
-      <HintPath>$(SptRoot)\BepInEx\plugins\spt\spt-core.dll</HintPath>
-    </Reference>
-    <Reference Include="spt-reflection">
-      <HintPath>$(SptRoot)\BepInEx\plugins\spt\spt-reflection.dll</HintPath>
-    </Reference>
-    <Reference Include="Unity.Postprocessing.Runtime">
-      <HintPath>$(SptRoot)\EscapeFromTarkov_Data\Managed\Unity.Postprocessing.Runtime.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine">
-      <HintPath>$(SptRoot)\EscapeFromTarkov_Data\Managed\UnityEngine.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.AssetBundleModule">
-      <HintPath>$(SptRoot)\EscapeFromTarkov_Data\Managed\UnityEngine.AssetBundleModule.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.CoreModule">
-      <HintPath>$(SptRoot)\EscapeFromTarkov_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.ImageConversionModule">
-      <HintPath>$(SptRoot)\EscapeFromTarkov_Data\Managed\UnityEngine.ImageConversionModule.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.IMGUIModule">
-      <HintPath>$(SptRoot)\EscapeFromTarkov_Data\Managed\UnityEngine.IMGUIModule.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.ParticleSystemModule">
-      <HintPath>$(SptRoot)\EscapeFromTarkov_Data\Managed\UnityEngine.ParticleSystemModule.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.PhysicsModule">
-      <HintPath>$(SptRoot)\EscapeFromTarkov_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.TerrainModule">
-      <HintPath>$(SptRoot)\EscapeFromTarkov_Data\Managed\UnityEngine.TerrainModule.dll</HintPath>
-    </Reference>
+        <Reference Include="0Harmony">
+            <HintPath>$(BepInExCore)\0Harmony.dll</HintPath>
+        </Reference>
+        <Reference Include="Assembly-CSharp">
+            <HintPath>$(GameManaged)\Assembly-CSharp.dll</HintPath>
+        </Reference>
+        <Reference Include="BepInEx">
+            <HintPath>$(BepInExCore)\BepInEx.dll</HintPath>
+        </Reference>
+        <Reference Include="Comfort">
+            <HintPath>$(GameManaged)\Comfort.dll</HintPath>
+        </Reference>
+        <Reference Include="Sirenix.Serialization">
+            <HintPath>$(GameManaged)\Sirenix.Serialization.dll</HintPath>
+        </Reference>
+        <Reference Include="spt-common">
+            <HintPath>$(SptPlugins)\spt-common.dll</HintPath>
+        </Reference>
+        <Reference Include="spt-core">
+            <HintPath>$(SptPlugins)\spt-core.dll</HintPath>
+        </Reference>
+        <Reference Include="spt-reflection">
+            <HintPath>$(SptPlugins)\spt-reflection.dll</HintPath>
+        </Reference>
+        <Reference Include="Unity.Postprocessing.Runtime">
+            <HintPath>$(GameManaged)\Unity.Postprocessing.Runtime.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine">
+            <HintPath>$(GameManaged)\UnityEngine.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine.AssetBundleModule">
+            <HintPath>$(GameManaged)\UnityEngine.AssetBundleModule.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine.CoreModule">
+            <HintPath>$(GameManaged)\UnityEngine.CoreModule.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine.ImageConversionModule">
+            <HintPath>$(GameManaged)\UnityEngine.ImageConversionModule.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine.IMGUIModule">
+            <HintPath>$(GameManaged)\UnityEngine.IMGUIModule.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine.ParticleSystemModule">
+            <HintPath>$(GameManaged)\UnityEngine.ParticleSystemModule.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine.PhysicsModule">
+            <HintPath>$(GameManaged)\UnityEngine.PhysicsModule.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine.TerrainModule">
+            <HintPath>$(GameManaged)\UnityEngine.TerrainModule.dll</HintPath>
+        </Reference>
     </ItemGroup>
 
-    <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-      <MakeDir Directories="$(SptRoot)\BepInEx\plugins\$(TargetName)" />
-      <Exec Command="copy /Y &quot;$(TargetPath)&quot; &quot;$(SptRoot)\BepInEx\plugins\$(TargetName)\$(TargetFileName)&quot;" />
+    <!--
+        A build that does not end up in the install is a build you have to remember to
+        copy. This was `copy /Y` through Exec, which is a cmd builtin and turns a locked
+        DLL into a failed build; the game holding the old copy is the one time it happens,
+        and that is worth a warning rather than a red build.
+
+        Off with -p:AutoInstall=false, and skipped when there is no plugins folder to copy
+        into, so the project still builds on a machine with no game on it.
+    -->
+    <Target Name="InstallToSpt" AfterTargets="Build"
+            Condition="'$(AutoInstall)' != 'false' And Exists('$(PluginsDir)')">
+        <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(PluginsDir)\$(TargetName)" ContinueOnError="true" />
+        <Message Importance="high" Text="$(TargetName): installed to $(PluginsDir)\$(TargetName)" />
     </Target>
 
 </Project>

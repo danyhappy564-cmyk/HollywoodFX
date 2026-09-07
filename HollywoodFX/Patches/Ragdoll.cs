@@ -133,7 +133,11 @@ internal class RagdollM1PostfixPatch : ModulePatch
 {
     protected override MethodBase GetTargetMethod()
     {
-        return typeof(RagdollClass).GetMethod(nameof(RagdollClass.method_1));
+        // Numbered, so logged. See PatchTarget.
+        return PatchTarget.Numbered(
+            typeof(RagdollClass),
+            nameof(RagdollClass.method_1),
+            "method_1(Rigidbody rigidbody)");
     }
 
     [PatchPrefix]
