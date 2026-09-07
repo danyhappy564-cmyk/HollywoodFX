@@ -20,7 +20,7 @@ internal class WeaponPrefabInitHotObjectsPostfixPatch : ModulePatch
     }
 
     [PatchPostfix]
-    private static void Postfix(WeaponPrefab __instance, Weapon weapon, IPlayer ___iplayer_0)
+    private static void Postfix(WeaponPrefab __instance, Weapon weapon, IPlayer ____player)
     {
         if (GameWorldAwakePrefixPatch.IsHideout)
             return;
@@ -33,7 +33,7 @@ internal class WeaponPrefabInitHotObjectsPostfixPatch : ModulePatch
         if (__instance.ObjectInHands is not Firearms firearms)
             return;
         
-        if (___iplayer_0 == null)
+        if (____player == null)
             return;
         
         var firearmsEffectsId = firearms.FirearmsEffects.transform.GetInstanceID();
@@ -48,9 +48,9 @@ internal class WeaponPrefabInitHotObjectsPostfixPatch : ModulePatch
             cache[firearmsEffectsId] = muzzleManager;
         }
         
-        var muzzleState = Singleton<MuzzleStatic>.Instance.UpdateMuzzleState(muzzleManager, weapon, ___iplayer_0);
+        var muzzleState = Singleton<MuzzleStatic>.Instance.UpdateMuzzleState(muzzleManager, weapon, ____player);
 
-        if (!___iplayer_0.IsYourPlayer || muzzleState == null) return;
+        if (!____player.IsYourPlayer || muzzleState == null) return;
         
         Singleton<LocalPlayerMuzzleEffects>.Instance.UpdateParents(muzzleState);
     }

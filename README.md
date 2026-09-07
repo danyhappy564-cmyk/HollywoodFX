@@ -262,3 +262,36 @@ SPT 공식 위키 [Client Modding Quick Guide] Step 1-5:
 - 아직 미해결: `AmmoPoolObject.float_0`의 4.1 이름. 그리고 이번에 실행조차 안 된
   패치들에 같은 종류가 둘 더 있습니다 — `WeaponPrefab.iplayer_0`, `Shell.vector3_2`.
   실행이 안 됐으니 검증도 안 된 상태입니다
+
+**(같은 날 — Harmony 필드 주입 3개 확정, 라이드 검증 완료)**
+
+로그로 **두 가지가 실전 확인**됐습니다:
+
+```
+[HollywoodGraphics] Running raid initialization
+[HollywoodGraphics] Graphics overrides map: woods - Woods enabled: True
+[HollywoodFX]       Original shot delegate retrieved: Void ShotDelegate(EFT.Ballistics.Shot)
+```
+
+- `method_41 = LocalGameMatching` 추론이 **맞았습니다.** 라이드 진입 시 실제로 돌았고
+  맵별 오버라이드(`woods`)까지 적용됐습니다
+- `_shotDelegate` 탐색도 작동합니다. 임팩트·고어·트레이서가 걸려 있는 그 델리게이트입니다
+
+남은 건 Harmony **필드 주입** 3개였습니다. 이건 파라미터 이름이라 컴파일러가 못 잡고
+패치 시점에 터집니다:
+
+| 4.0 | 4.1 | 확정 근거 |
+| --- | --- | --- |
+| `AmmoPoolObject.float_0` | `c` | `AmmoPoolObject`의 유일한 `float` |
+| `WeaponPrefab.iplayer_0` | `_player` | 유일한 `IPlayer` |
+| `Shell.vector3_2` | `_rotationVector` | 유일한 `Vector3` |
+
+`c` 한 글자에 의존하는 게 불안해 보이지만, 그 클래스에 `float`가 그것뿐이라 다른 것일
+수 없습니다.
+
+뒤의 둘은 이번 라이드에서 **실행조차 안 됐던** 패치들입니다 — 앞선 실패가 `Awake()`를
+끊어버렸으니까요. 감싸기 수정이 없었으면 이 둘은 다음 라이드에서 새로 터졌을 겁니다.
+
+`LootItem._currentPhysicsTime`은 이번 덤프에 없습니다(다른 타입인 줄 알고 안 뽑음).
+난독화기 이름이 아니라 실제 이름이라 위험은 낮고, 이제는 틀려도 그 패치 하나만
+실패하고 나머지는 붙습니다.
