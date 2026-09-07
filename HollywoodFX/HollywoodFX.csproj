@@ -17,25 +17,25 @@
     <!--
         Where the game and BepInEx actually are, found rather than assumed.
 
-        4.1 puts the game under SPT_Runtime\ (4.0 used SPT\), and an install can end up
-        holding a second, untouched EscapeFromTarkov_Data at the root as well. Only one of
-        the two Assembly-CSharp.dll is the one SPT deobfuscated.
+        The game and BepInEx live at the install root. SPT_Runtime\ holds SPT's own
+        launcher, server and user folder, which is what the 4.1 notes about that folder
+        are describing; EscapeFromTarkov.exe is not in it.
 
-        Getting that wrong does not fail loudly. It compiles against BSG raw names, where
-        nothing SPT renamed exists and most members are unprintable unicode, so every type
-        the 4.1 migration tables promise comes back "not found" and it reads as though the
-        tables are wrong. That is exactly what happened here.
+        The root is therefore checked first, with SPT_Runtime\ and SPT\ kept only as
+        fallbacks for layouts that put the game somewhere else. Point GameRoot or
+        BepInExRoot straight at a folder to skip the search.
 
-        So SPT_Runtime\ is checked first, then SPT\, and the bare root only as a last
-        resort. The AssemblyDump tool's scan mode lists which copies exist and which one is
-        actually deobfuscated.
+        Finding the file is not the same as it being the right file. An install whose
+        assembly has not been deobfuscated yet still resolves here and then fails to find
+        every type SPT renamed, which reads as though the migration tables are wrong. The
+        AssemblyDump tool's scan mode is how to tell those apart.
 
         Point GameRoot or BepInExRoot straight at a folder to skip the search.
     -->
     <PropertyGroup>
+        <GameRoot Condition="'$(GameRoot)' == '' And Exists('$(SptRoot)\EscapeFromTarkov_Data\Managed\Assembly-CSharp.dll')">$(SptRoot)</GameRoot>
         <GameRoot Condition="'$(GameRoot)' == '' And Exists('$(SptRoot)\SPT_Runtime\EscapeFromTarkov_Data\Managed\Assembly-CSharp.dll')">$(SptRoot)\SPT_Runtime</GameRoot>
         <GameRoot Condition="'$(GameRoot)' == '' And Exists('$(SptRoot)\SPT\EscapeFromTarkov_Data\Managed\Assembly-CSharp.dll')">$(SptRoot)\SPT</GameRoot>
-        <GameRoot Condition="'$(GameRoot)' == '' And Exists('$(SptRoot)\EscapeFromTarkov_Data\Managed\Assembly-CSharp.dll')">$(SptRoot)</GameRoot>
         <GameRoot Condition="'$(GameRoot)' == ''">$(SptRoot)</GameRoot>
 
         <BepInExRoot Condition="'$(BepInExRoot)' == '' And Exists('$(GameRoot)\BepInEx\core\BepInEx.dll')">$(GameRoot)</BepInExRoot>
