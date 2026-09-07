@@ -229,3 +229,36 @@ SPT 공식 위키 [Client Modding Quick Guide] Step 1-5:
 
 `__muzzleJets`의 밑줄 두 개도 짚어둡니다. 옆에 `GameObject[] _muzzleJets`가 따로 있어서
 밑줄 하나로 적으면 타입이 달라 조용히 어긋납니다.
+
+**(같은 날 — 배포 보류: 패치 하나가 나머지 18개를 데려갔음)**
+
+로그상 조용해 보였지만 **HollywoodFX의 절반이 로드되지 않고 있었습니다.**
+
+```
+[Warning:HarmonyX] AccessTools.Field: Could not find field for type
+                   EFT.AssetsManager.AmmoPoolObject and name float_0
+[Error  :HarmonyX] Failed to patch AmmoPoolObject::StartAutoDestroyCountDown(float)
+[Error  :ModulePatch] AmmoPoolObjectAutoDestroyPostfixPatch: HarmonyException ...
+   at SPT.Reflection.Patching.ModulePatch.Enable ()
+[Info   :ModulePatch] Enabled patch LampControllerAwakePostfixPatch    ← 다른 플러그인
+```
+
+스택이 `ModulePatch.Enable()`에서 끝나고 **바로 다음 줄이 HollywoodGraphics**입니다.
+즉 HollywoodFX의 `Awake()`가 9번째 `Enable()`에서 예외로 죽었고, **그 아래 18개
+패치는 실행조차 되지 않았습니다** — 총구 이펙트, 폭발, 래그돌, 뇌진탕, 탄피 물리.
+
+로그에는 아무 말도 안 남습니다. 없는 기능은 자기가 없다고 말하지 않으니까요.
+
+- **원인**: `___float_0`. Harmony의 필드 주입은 **파라미터 이름**이라 컴파일러가 못
+  잡고 패치 시점에 터집니다. 4.1이 이 필드에 진짜 이름을 줬습니다
+
+- **구조적 수정**: `Enable()` 호출 25개를 감쌌습니다. 패치 하나가 못 붙으면 에러를
+  남기고 **나머지는 계속 붙습니다.** 그리고 마지막에 실패 목록을 한 줄로 모아서
+  찍습니다 — 이 크기의 로그에서 개별 에러는 스크롤에 묻히고, 정작 봐야 할 건
+  "이 모드의 일부가 안 돌고 있다"는 사실이라서요.
+
+  붙지 못한 패치는 에러를 받을 자격이 있습니다. 그 아래 18개까지 가져갈 자격은 없고요.
+
+- 아직 미해결: `AmmoPoolObject.float_0`의 4.1 이름. 그리고 이번에 실행조차 안 된
+  패치들에 같은 종류가 둘 더 있습니다 — `WeaponPrefab.iplayer_0`, `Shell.vector3_2`.
+  실행이 안 됐으니 검증도 안 된 상태입니다

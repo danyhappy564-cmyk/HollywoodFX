@@ -1,4 +1,6 @@
 ﻿using System.Collections;
+using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Reflection;
@@ -14,6 +16,7 @@ using HollywoodFX.Lighting;
 using HollywoodFX.Muzzle.Patches;
 using HollywoodFX.Patches;
 using HollywoodFX.Render;
+using SPT.Reflection.Patching;
 using UnityEngine;
 
 namespace HollywoodFX;
@@ -171,48 +174,48 @@ public class Plugin : BaseUnityPlugin
         versionConfig.Value = MajorMinorVersion;
 
         // Patches
-        new GameWorldDisposePostfixPatch().Enable();
+        Enable(new GameWorldDisposePostfixPatch());
 
-        new GameWorldAwakePrefixPatch().Enable();
-        new GameWorldStartedPostfixPatch().Enable();
-        new ShotDelegateWrapperPatch().Enable();
+        Enable(new GameWorldAwakePrefixPatch());
+        Enable(new GameWorldStartedPostfixPatch());
+        Enable(new ShotDelegateWrapperPatch());
 
-        new EffectsAwakePrefixPatch().Enable();
-        new EffectsAwakePostfixPatch().Enable();
-        new EffectsEmitPatch().Enable();
-        new TextureDecalsPainterVisCheckPatch().Enable();
-        new AmmoPoolObjectAutoDestroyPostfixPatch().Enable();
+        Enable(new EffectsAwakePrefixPatch());
+        Enable(new EffectsAwakePostfixPatch());
+        Enable(new EffectsEmitPatch());
+        Enable(new TextureDecalsPainterVisCheckPatch());
+        Enable(new AmmoPoolObjectAutoDestroyPostfixPatch());
 
         if (MiscShellPhysicsEnabled.Value && !visceralCombatDetected)
-            new ShellOnBouncePrefixPatch().Enable();
+            Enable(new ShellOnBouncePrefixPatch());
 
         if (MuzzleEffectsEnabled.Value)
         {
-            new FirearmControllerInitiateShotPrefixPatch().Enable();
-            new MuzzleManagerShotPrefixPatch().Enable();
-            new WeaponPrefabInitHotObjectsPostfixPatch().Enable();
+            Enable(new FirearmControllerInitiateShotPrefixPatch());
+            Enable(new MuzzleManagerShotPrefixPatch());
+            Enable(new WeaponPrefabInitHotObjectsPostfixPatch());
         }
 
-        new EffectsInitBlastControllerPatch().Enable();
-        new EffectsWipeDefaultExplosionSystemsPatch().Enable();
-        new EffectsEmitGrenadePatch().Enable();
+        Enable(new EffectsInitBlastControllerPatch());
+        Enable(new EffectsWipeDefaultExplosionSystemsPatch());
+        Enable(new EffectsEmitGrenadePatch());
 
-        new GameWorldInitConcussionPatch().Enable();
+        Enable(new GameWorldInitConcussionPatch());
 
         if (RagdollEnabled.Value && !visceralCombatDetected)
         {
             if (RagdollCinematicEnabled.Value)
-                new PlayerPoolObjectRoleModelPostfixPatch().Enable();
+                Enable(new PlayerPoolObjectRoleModelPostfixPatch());
 
-            new RagdollStartPrefixPatch().Enable();
-            new RagdollStartPostfixPatch().Enable();
-            new PlayerRigidbodySleepHierarchyTryPutToSleepPrefixPatch().Enable();
-            new RagdollM1PostfixPatch().Enable();
+            Enable(new RagdollStartPrefixPatch());
+            Enable(new RagdollStartPostfixPatch());
+            Enable(new PlayerRigidbodySleepHierarchyTryPutToSleepPrefixPatch());
+            Enable(new RagdollM1PostfixPatch());
 
             if (RagdollDropWeaponEnabled.Value)
             {
-                new AttachWeaponPostfixPatch().Enable();
-                new LootItemIsRigidBodyDonePrefixPatch().Enable();
+                Enable(new AttachWeaponPostfixPatch());
+                Enable(new LootItemIsRigidBodyDonePrefixPatch());
             }
 
             EFTHardSettings.Instance.CorpseEnergyToSleep = -1;
@@ -220,8 +223,10 @@ public class Plugin : BaseUnityPlugin
 
         if (GoreEnabled.Value && !visceralCombatDetected)
         {
-            new PlayerOnDeadPostfixPatch().Enable();
+            Enable(new PlayerOnDeadPostfixPatch());
         }
+
+        ReportFailedPatches();
 
         Log.LogInfo("Initialization finished");
 
@@ -705,5 +710,50 @@ public class Plugin : BaseUnityPlugin
             EFTHardSettings.Instance.Shells.deltaTimeStep = 0.3f;
             // EFTHardSettings.Instance.Shells.bounceSpeedMult = 1.0f;
         }
+    }
+
+    /// <summary>
+    /// Applies one patch, and does not let it take the others with it.
+    ///
+    /// `ModulePatch.Enable()` throws when Harmony cannot bind, and these were called one
+    /// after another straight out of Awake, so the first failure ended the method and
+    /// every patch below it silently never happened. That is how a 4.1 build looked
+    /// healthy while half the mod was missing: one field rename took out the muzzle
+    /// effects, the explosions, the ragdolls and the concussion, none of which mention
+    /// themselves in the log when they are simply not there.
+    ///
+    /// A patch that cannot bind is worth an error. It is not worth the eighteen after it.
+    /// </summary>
+    private static void Enable(ModulePatch patch)
+    {
+        var name = patch.GetType().Name;
+
+        try
+        {
+            patch.Enable();
+        }
+        catch (Exception ex)
+        {
+            _failedPatches.Add(name);
+            Log.LogError($"[HollywoodFX] patch {name} did not apply: {ex.GetType().Name}: {ex.Message}");
+        }
+    }
+
+    private static readonly List<string> _failedPatches = new List<string>();
+
+    /// <summary>
+    /// Said once, at the end, because individual patch errors scroll past in a log this
+    /// size and "some of this mod is not running" is the part worth seeing.
+    /// </summary>
+    private static void ReportFailedPatches()
+    {
+        if (_failedPatches.Count == 0)
+        {
+            return;
+        }
+
+        Log.LogError(
+            $"[HollywoodFX] {_failedPatches.Count} patch(es) did not apply, so the features "
+            + $"behind them are off: {string.Join(", ", _failedPatches.ToArray())}");
     }
 }
