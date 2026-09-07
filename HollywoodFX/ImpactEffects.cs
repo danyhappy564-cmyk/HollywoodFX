@@ -7,6 +7,7 @@ using HollywoodFX.Render;
 using Systems.Effects;
 using UnityEngine;
 using Random = UnityEngine.Random;
+using EFT.InventoryLogic;
 
 namespace System.Runtime.CompilerServices
 {
@@ -58,7 +59,7 @@ namespace HollywoodFX
                 Singleton<PostProcessing>.Instance.Concussion.Apply(kinetics.DistanceToImpact, duration, distanceNorm, 2f * duration);
             }
 
-            if (Plugin.TracerImpactsEnabled.Value && kinetics.Bullet.Info.Ammo is AmmoItemClass { Tracer: true } ammo)
+            if (Plugin.TracerImpactsEnabled.Value && kinetics.Bullet.Info.Ammo is Ammo { Tracer: true } ammo)
                 _tracerImpacts.Emit(kinetics, ammo);
             else
             {

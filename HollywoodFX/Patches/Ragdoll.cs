@@ -93,12 +93,12 @@ internal class RagdollStartPrefixPatch : ModulePatch
 {
     protected override MethodBase GetTargetMethod()
     {
-        return typeof(RagdollClass).GetMethod(nameof(RagdollClass.Start));
+        return typeof(CorpseRagdoll).GetMethod(nameof(CorpseRagdoll.Start));
     }
 
     [PatchPrefix]
     // ReSharper disable InconsistentNaming
-    public static void Prefix(RagdollClass __instance)
+    public static void Prefix(CorpseRagdoll __instance)
     {
         __instance.Func_0 = CheckCorpseIsStill;
     }
@@ -135,14 +135,14 @@ internal class RagdollM1PostfixPatch : ModulePatch
     {
         // Numbered, so logged. See PatchTarget.
         return PatchTarget.Numbered(
-            typeof(RagdollClass),
-            nameof(RagdollClass.method_1),
+            typeof(CorpseRagdoll),
+            nameof(CorpseRagdoll.method_1),
             "method_1(Rigidbody rigidbody)");
     }
 
     [PatchPrefix]
     // ReSharper disable InconsistentNaming
-    public static bool Prefix(RagdollClass __instance, Rigidbody rigidbody)
+    public static bool Prefix(CorpseRagdoll __instance, Rigidbody rigidbody)
     {
         return rigidbody != null;
     }
@@ -152,12 +152,12 @@ internal class RagdollStartPostfixPatch : ModulePatch
 {
     protected override MethodBase GetTargetMethod()
     {
-        return typeof(RagdollClass).GetMethod(nameof(RagdollClass.Start));
+        return typeof(CorpseRagdoll).GetMethod(nameof(CorpseRagdoll.Start));
     }
 
     [PatchPostfix]
     // ReSharper disable InconsistentNaming
-    public static void Postfix(RagdollClass __instance)
+    public static void Postfix(CorpseRagdoll __instance)
     {
         foreach (var spawner in __instance.RigidbodySpawner_0)
         {
@@ -170,11 +170,11 @@ internal class AttachWeaponPostfixPatch : ModulePatch
 {
     protected override MethodBase GetTargetMethod()
     {
-        return typeof(RagdollClass).GetMethod(nameof(RagdollClass.AttachWeapon));
+        return typeof(CorpseRagdoll).GetMethod(nameof(CorpseRagdoll.AttachWeapon));
     }
 
     [PatchPostfix]
-    private static void Postfix(RagdollClass __instance, Rigidbody weaponRigidbody)
+    private static void Postfix(CorpseRagdoll __instance, Rigidbody weaponRigidbody)
     {
         var component = weaponRigidbody.gameObject.GetComponent<SpringJoint>();
         if (component != null)

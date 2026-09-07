@@ -10,6 +10,7 @@ using JsonType;
 using Systems.Effects;
 using UnityEngine;
 using Random = UnityEngine.Random;
+using EFT.InventoryLogic;
 
 namespace HollywoodFX;
 
@@ -30,7 +31,7 @@ internal class TracerImpactEffects
     private readonly EffectBundle _tracerYellow;
     private readonly EffectBundle _tracerWhite;
 
-    private readonly LightAllocationPoolClass _lightPool;
+    private readonly LightPool _lightPool;
 
     public TracerImpactEffects(Effects eftEffects, Dictionary<string, EffectBundle> mainEffects, Dictionary<string, EffectBundle> tracerEffects)
     {
@@ -162,10 +163,14 @@ internal class TracerImpactEffects
         _impacts[(int)MaterialType.GenericHard] = new TracerImpact(lowFlammable, 0.35f, 0.5f);
         _impacts[(int)MaterialType.MetalNoDecal] = new TracerImpact(lowFlammable, 0.45f, 0.6f);
 
-        _lightPool = Traverse.Create(eftEffects).Field("lightAllocationPoolClass").GetValue<LightAllocationPoolClass>();
+        // "lightAllocationPoolClass" was the obfuscator naming the field after its type,
+        // and that type is LightPool now. See ObfuscatedField.
+        _lightPool = (LightPool)ObfuscatedField
+            .Find(typeof(Effects), typeof(LightPool), "lightAllocationPoolClass")
+            ?.GetValue(eftEffects);
     }
 
-    public void Emit(ImpactKinetics kinetics, AmmoItemClass ammo)
+    public void Emit(ImpactKinetics kinetics, Ammo ammo)
     {
         var impactDef = _impacts[(int)kinetics.Material];
 
@@ -214,7 +219,9 @@ internal class TracerImpactEffects
 
         if (kinetics.DistanceToImpact <= 50f)
         {
-            _lightPool.Add(kinetics.Position, lightColor, 2.5f);
+            // Null only if the field could not be found at all, which ObfuscatedField
+            // has already said once. Silent here, or it says it again per impact.
+            _lightPool?.Add(kinetics.Position, lightColor, 2.5f);
         }
     }
 }

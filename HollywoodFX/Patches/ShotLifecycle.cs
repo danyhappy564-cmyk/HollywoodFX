@@ -12,7 +12,7 @@ namespace HollywoodFX.Patches;
 
 public class ShotDelegateWrapperPatch : ModulePatch
 {
-    public static GDelegate64 OriginalShotDelegate;
+    public static ShotDelegate OriginalShotDelegate;
     
     protected override MethodBase GetTargetMethod()
     {
@@ -29,10 +29,23 @@ public class ShotDelegateWrapperPatch : ModulePatch
         var ballistics = __instance.gameObject.GetComponent<BallisticsCalculator>();
         
         Plugin.Log.LogInfo("Getting the shot delegate field from BallisticsCalculator");
-        var shotDelegateField = Traverse.Create(ballistics).Field("gdelegate64_0");
-        OriginalShotDelegate = shotDelegateField.GetValue<GDelegate64>();
+
+        // "gdelegate64_0" was the obfuscator naming the field after its type, and that
+        // type is ShotDelegate now. See ObfuscatedField.
+        var shotDelegateField = ObfuscatedField.Find(
+            typeof(BallisticsCalculator), typeof(ShotDelegate), "gdelegate64_0");
+
+        if (shotDelegateField == null)
+        {
+            // Every impact, gore and tracer effect hangs off this delegate, so losing it
+            // is worth saying plainly rather than leaving as a mod that does nothing.
+            Plugin.Log.LogError("[HollywoodFX] no shot delegate to wrap, so shot effects are off.");
+            return;
+        }
+
+        OriginalShotDelegate = (ShotDelegate)shotDelegateField.GetValue(ballistics);
         Plugin.Log.LogInfo($"Original shot delegate retrieved: {OriginalShotDelegate.Method}");
-        shotDelegateField.SetValue(new GDelegate64(OnShot));
+        shotDelegateField.SetValue(ballistics, new ShotDelegate(OnShot));
         Plugin.Log.LogInfo("Replaced the shot delegate with internal HFX override");
     }
     
@@ -41,7 +54,7 @@ public class ShotDelegateWrapperPatch : ModulePatch
      * Furthermore, Fika now overrides the ShotDelegate method and doesn't call the base class, which means we have to hook in before ShotDelegate
      * is called at all.
      */
-    private static void OnShot(EftBulletClass shotResult)
+    private static void OnShot(Shot shotResult)
     {
         var bullet = ImpactStatic.Kinetics.Bullet;
 
@@ -49,7 +62,7 @@ public class ShotDelegateWrapperPatch : ModulePatch
         
         var hitCollider = bullet.Info.HitCollider;
 
-        if (hitCollider != null && bullet.HitColliderRoot.gameObject.layer == LayerMaskClass.PlayerLayer)
+        if (hitCollider != null && bullet.HitColliderRoot.gameObject.layer == LayersMaskController.PlayerLayer)
         {
             Singleton<PlayerDamageRegistry>.Instance.RegisterDamage(ImpactStatic.Kinetics.Bullet, hitCollider, bullet.HitColliderRoot);            
         }

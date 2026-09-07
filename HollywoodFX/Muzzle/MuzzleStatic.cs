@@ -10,7 +10,7 @@ internal class CurrentShot
 {
     public bool Handled = true;
 
-    public AmmoItemClass Ammo;
+    public Ammo Ammo;
     public bool Silenced;
 }
 
@@ -61,7 +61,7 @@ internal class MuzzleStatic
         return _muzzleStates.TryGetValue(managerId, out state);
     }
 
-    public void UpdateCurrentShot(AmmoItemClass ammo, bool silenced)
+    public void UpdateCurrentShot(Ammo ammo, bool silenced)
     {
         CurrentShot.Handled = false;
         CurrentShot.Ammo = ammo;

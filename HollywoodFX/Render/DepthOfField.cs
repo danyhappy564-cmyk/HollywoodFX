@@ -1,3 +1,4 @@
+using EFT.CameraControl;
 ﻿using UnityEngine;
 
 namespace HollywoodFX.Render;
@@ -21,7 +22,7 @@ public class DepthOfField
 
     public DepthOfField()
     {
-        var camera = CameraClass.Instance?.Camera;
+        var camera = CameraManager.Instance?.Camera;
 
         if (camera == null)
         {

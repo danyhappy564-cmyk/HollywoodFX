@@ -54,3 +54,59 @@
 
 - 나머지 패치 대상 20여 개는 전부 실제 이름 + `nameof(...)`이라 이름이 없어지면
   **컴파일 에러**로 잡힙니다. 즉 빌드가 통과하면 그쪽은 문제없습니다
+
+**(같은 날 추가 — 공식 위키 확인 후)**
+
+SPT 공식 위키의 [Client Mod Migration 4.0 to 4.1] 문서를 보고 위 내용을 대폭 보강했습니다.
+위키가 알려준 핵심은 하나입니다:
+
+> **4.1은 클라이언트를 역난독화했습니다.** 4.0에서 `GClass680` / `GStruct80` 같던 타입들이
+> 진짜 이름과 진짜 네임스페이스를 갖게 됐고, 4.0 시절의 부분 별칭(`~Class` 접미사)들도
+> 전부 바뀌었습니다. **4.0 클라이언트 모드는 전부 4.1로 재빌드해야 합니다.**
+
+위키에 5,957줄짜리 4.0→4.1 이름 매핑 표가 있어서, 이 모드가 참조하는 모든 식별자를
+그 표에 대조했습니다(중첩 타입은 표에서 `Outer+Inner` 형태라 마지막 세그먼트 기준으로도
+한 번 더 훑음). **바뀐 이름 20개, 치환 38곳** — 전부 표 근거입니다:
+
+| 4.0 | 4.1 |
+| --- | --- |
+| `AmmoItemClass` | `EFT.InventoryLogic.Ammo` |
+| `AssaultRifleItemClass` / `MarksmanRifleItemClass` / `SniperRifleItemClass` | `EFT.InventoryLogic.AssaultRifle` / `MarksmanRifle` / `SniperRifle` |
+| `PistolItemClass` / `RevolverItemClass` / `ShotgunItemClass` / `SmgItemClass` | `EFT.InventoryLogic.Pistol` / `Revolver` / `Shotgun` / `Smg` |
+| `EftBulletClass` | `EFT.Ballistics.Shot` |
+| `LayerMasksDataAbstractClass` | `EFT.Ballistics.BallisticsCalculatorConstants` |
+| `CameraClass` | `EFT.CameraControl.CameraManager` |
+| `GDelegate64` | `EFT.ShotDelegate` |
+| `WeaponManagerClass` | `EFT.Firearms` |
+| `NotificationManagerClass` | `EFT.Communications.NotificationManager` |
+| `RagdollClass` | `EFT.Interactive.CorpseRagdoll` |
+| `LightAllocationPoolClass` | `Systems.Effects.LightPool` |
+| `LayerMaskClass` | `LayersMaskController` |
+| `BodyRendererDataStruct` | `BodyRenderer` |
+| `DeferredDecalRenderer+DeferredDecalMeshDataClass` | `DeferredDecalRenderer+ManagedMesh` |
+| `DeferredDecalRenderer+DeferredDecalBufferClass` | `DeferredDecalRenderer+CameraData` |
+
+타입이 네임스페이스 안으로 들어가서 `using`도 같이 추가했습니다
+(`EFT.InventoryLogic`, `EFT.CameraControl`, `EFT.Ballistics`).
+
+**그리고 이게 컴파일러가 절대 못 잡는 문제를 하나 드러냈습니다.** 이 모드는 private 필드를
+문자열로 리플렉션해서 쓰는데, 그중 셋은 **필드 이름 자체가 타입 이름에서 나온 것**이었습니다:
+
+- `BallisticsCalculator.gdelegate64_0` — 타입이 `ShotDelegate`가 됐으니 필드도 바뀌었을 것
+- `Effects.lightAllocationPoolClass` — 타입이 `LightPool`이 됐으니 마찬가지
+- `DeferredDecalRenderer.dictionary_0` / `dictionary_2` — 난독화기가 센 번호라 밀림
+
+이름이 문자열이라 **빌드는 통과하고 라이드에서 터집니다.** 그런데 역난독화가 해결책도
+같이 줬습니다 — **필드의 타입은 안 움직이고, 이 클래스들에서는 타입만으로 필드가 특정됩니다.**
+`ObfuscatedField`가 이름으로 먼저 찾고(아직 맞으면 공짜로 정확함), 안 되면 그 타입인 필드를
+찾고, 둘 다 실패할 때만 이름을 대며 에러를 남깁니다. 못 찾으면 해당 기능만 꺼지고
+총알마다 예외를 던지지는 않습니다.
+
+`gdelegate64_0`은 특히 중요한데, 임팩트·고어·트레이서 이펙트가 전부 이 델리게이트에
+걸려 있어서 이게 실패하면 **모드가 조용히 아무것도 안 하게** 됩니다. 그래서 실패 시
+"shot effects are off"라고 명시적으로 남깁니다.
+
+**여전히 남은 위험** (어셈블리 없이는 못 잡음):
+- `DecalPainter`의 `_renderer.method_6(...)` — 직접 호출이라 없어지면 컴파일 에러지만,
+  같은 시그니처의 다른 메서드로 번호가 밀리면 조용히 엉뚱한 걸 부릅니다
+- `TextureDecalsPainter.method_5`, `CorpseRagdoll.method_1` — 위의 `PatchTarget` 로그로 확인
