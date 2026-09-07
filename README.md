@@ -1,7 +1,18 @@
-HollywoodFX — SPT 4.1.5 대응 포크
+# HollywoodFX (SPT 4.1.5)
 
-원작: https://github.com/SleepingPills/HollywoodFX
-이 포크: SPT 4.1.5 (직전 4.0.10 대응 상태에서 이관)
+> **원작자 · 원본 레포**
+> **SleepingPills** — https://github.com/SleepingPills/HollywoodFX
+> SPT Forge에도 게시되어 있습니다.
+>
+> **라이선스: MIT** (원작자 확인)
+>
+> 이 레포는 위 원작을 **SPT 4.1.5에서 동작하도록 포팅한 포크**입니다.
+> 기능을 추가하거나 바꾼 것이 아니라, 4.1의 클라이언트 역난독화로 깨진 참조를
+> 되살린 것이 전부입니다. 모드 자체의 설계와 에셋은 전부 원작자의 것입니다.
+
+---
+
+원작: SleepingPills / 이 포크: SPT 4.1.5 대응 (직전 4.0.10 대응 상태에서 이관)
 
 **원작에는 README가 없습니다.** 그래서 아래 <모드 설명>은 번역이 아니라 코드와 설정
 항목에서 제가 정리한 것이고, 원작자가 쓴 글이 아닙니다. 그 아래 <상세 변경점>이
@@ -41,6 +52,12 @@ dotnet build -p:AutoInstall=false            # 설치본에 복사하지 않기
 
 빌드가 끝나면 `BepInEx\plugins\HollywoodFX\`로 자동 복사됩니다. 게임이 켜져 있으면
 DLL이 잠겨서 복사가 실패하는데, 빌드를 실패시키지 않고 경고만 남깁니다.
+
+빌드 후 설치본 복사에는 `RELEASE_README.txt`와 `LICENSE`도 함께 들어갑니다. MIT는
+재배포 시 라이선스 전문과 저작권 표기를 동봉하도록 요구하고, 원작자도 크레딧을
+파일 옆에 두기를 요청했습니다. 배포용 zip을 만들 때 따로 챙길 필요 없이 플러그인
+폴더에 이미 들어 있게 됩니다.
+
 
 ---
 

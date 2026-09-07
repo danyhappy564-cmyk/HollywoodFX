@@ -130,6 +130,16 @@
     <Target Name="InstallToSpt" AfterTargets="Build"
             Condition="'$(AutoInstall)' != 'false' And Exists('$(PluginsDir)')">
         <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(PluginsDir)\$(TargetName)" ContinueOnError="true" />
+
+        <!--
+            The attribution travels with the build rather than being remembered at zip
+            time. MIT asks for the licence text and the copyright notice to accompany
+            redistribution, and the original author asked for the credit to sit beside
+            the file, so both go where the DLL goes.
+        -->
+        <Copy SourceFiles="$(MSBuildProjectDirectory)\..\RELEASE_README.txt;$(MSBuildProjectDirectory)\..\LICENSE"
+              DestinationFolder="$(PluginsDir)\$(TargetName)" ContinueOnError="true" />
+
         <Message Importance="high" Text="$(TargetName): installed to $(PluginsDir)\$(TargetName)" />
     </Target>
 
