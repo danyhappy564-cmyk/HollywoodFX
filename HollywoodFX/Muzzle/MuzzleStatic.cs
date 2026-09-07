@@ -33,27 +33,19 @@ internal class MuzzleStatic
     public readonly CurrentShot CurrentShot = new();
     private readonly Dictionary<int, MuzzleState> _muzzleStates = new();
 
-    // The _0 suffix is the obfuscator's, which means these names belong to a build of the
-    // game rather than to the game. Resolved through Field so a rename after an update
-    // says so once and leaves the muzzle plain, instead of throwing on every shot fired
-    // for the rest of the raid.
-    private static readonly FieldInfo JetField = Field("muzzleJet_0");
-    private static readonly FieldInfo FumeField = Field("muzzleFume_0");
-    private static readonly FieldInfo SmokeField = Field("muzzleSmoke_0");
+    // Not renamed by the deobfuscator, which only touches fields whose names start with
+    // one of the obfuscator's prefixes, and "muzzle" is not one. Resolved through
+    // ObfuscatedField anyway: it takes the name when the name still works, matches on the
+    // array type if it ever stops, and leaves the muzzle plain rather than throwing on
+    // every shot if neither does.
+    private static readonly FieldInfo JetField =
+        ObfuscatedField.Find(typeof(MuzzleManager), typeof(MuzzleJet[]), "muzzleJet_0");
 
-    private static FieldInfo Field(string name)
-    {
-        var field = typeof(MuzzleManager).GetField(name, BindingFlags.NonPublic | BindingFlags.Instance);
+    private static readonly FieldInfo FumeField =
+        ObfuscatedField.Find(typeof(MuzzleManager), typeof(MuzzleFume[]), "muzzleFume_0");
 
-        if (field == null)
-        {
-            Plugin.Log.LogError(
-                $"[HollywoodFX] MuzzleManager.{name} is gone in this build of the game, so muzzle "
-                + "effects are off. The name is the obfuscator's and moves when BSG changes the class.");
-        }
-
-        return field;
-    }
+    private static readonly FieldInfo SmokeField =
+        ObfuscatedField.Find(typeof(MuzzleManager), typeof(MuzzleSmoke[]), "muzzleSmoke_0");
 
     public bool TryGetMuzzleState(MuzzleManager manager, out MuzzleState state)
     {

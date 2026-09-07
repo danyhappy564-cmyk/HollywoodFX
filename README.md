@@ -110,3 +110,37 @@ SPT 공식 위키의 [Client Mod Migration 4.0 to 4.1] 문서를 보고 위 내�
 - `DecalPainter`의 `_renderer.method_6(...)` — 직접 호출이라 없어지면 컴파일 에러지만,
   같은 시그니처의 다른 메서드로 번호가 밀리면 조용히 엉뚱한 걸 부릅니다
 - `TextureDecalsPainter.method_5`, `CorpseRagdoll.method_1` — 위의 `PatchTarget` 로그로 확인
+
+**(같은 날 재차 추가 — SPT `assembly-tool` 소스 확인 후)**
+
+역난독화를 실제로 수행하는 도구(`SP-Tushonka/assembly-tool`) 소스를 읽고, 위에서
+"~일 것이다"로 적었던 것들을 **사실로 교정**했습니다.
+
+도구의 `ObfuscatedFieldRenamer`는 난독화된 필드를 **그 필드의 타입 이름에서** 새 이름을
+만듭니다. 단, 해당되는 건 이름이 난독화기 접두사로 시작하는 필드뿐입니다
+(`DataProvider.ObfuscatedPrefixes`: Class, GClass, Struct, GStruct, Interface, GInterface,
+Delegate, GDelegate, Exception, GException, GControl, GAttribute, method, smethod, vmethod
++ 뒤에 숫자).
+
+이 기준으로 우리 필드 4종의 운명이 **갈립니다. 이름만 보고 짐작한 것과 다릅니다:**
+
+| 필드 | 접두사 해당? | 결론 |
+| --- | --- | --- |
+| `BallisticsCalculator.gdelegate64_0` | ✅ `GDelegate` | 타입이 `ShotDelegate`가 됐으므로 **이름 사라짐 (확정)** |
+| `Effects.lightAllocationPoolClass` | ❌ | 타입은 `LightPool`이 됐지만 **필드 이름은 그대로** |
+| `DeferredDecalRenderer.dictionary_0` / `_2` | ❌ | **그대로** |
+| `MuzzleManager.muzzleJet_0` 외 2 | ❌ | **그대로** |
+
+즉 제가 위에서 "셋 다 바뀌었을 것"이라고 쓴 건 틀렸고, **실제로 확실히 깨지는 건
+`gdelegate64_0` 하나**입니다. 그런데 그 하나가 하필 임팩트·고어·트레이서가 전부
+매달려 있는 델리게이트라, 이 모드가 조용히 아무것도 안 하게 만드는 그 필드입니다.
+
+`ObfuscatedField`는 어느 쪽이든 맞게 동작합니다 — 이름이 아직 유효하면 이름을 쓰고,
+아니면 타입으로 찾습니다. 그래서 총구 필드 3개도 같은 경로로 옮겼습니다(이름이
+살아있으면 공짜로 정확하고, 언젠가 바뀌면 타입이 받아줍니다).
+
+**메서드는 자동 개명이 없습니다.** 도구에 `ObfuscatedFieldRenamer`는 있어도 그에
+대응하는 자동 메서드 개명기는 없고, 명시적 `MethodRenames` 목록으로만 바뀝니다.
+`TextureDecalsPainter`와 `CorpseRagdoll`에는 그 목록이 아예 없습니다 — 즉
+`method_5` / `method_1`은 **SPT가 건드리지 않습니다.** 남은 변수는 BSG 쪽 번호가
+밀렸는지 뿐이고, 그건 `PatchTarget` 로그로 확인합니다.
