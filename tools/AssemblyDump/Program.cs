@@ -15,12 +15,106 @@ using System.Text;
 if (args.Length == 0)
 {
     Console.Error.WriteLine("""
-        usage: dotnet run -- "<Assembly-CSharp.dll>" [name to detail ...]
+        usage:
+          dotnet run -- --scan "<SPT install root>"
+              Finds every Assembly-CSharp.dll under the root and says which one SPT
+              actually deobfuscated. Start here if a build cannot find types that the
+              mapping tables say exist.
+
+          dotnet run -- "<Assembly-CSharp.dll>" [name to detail ...]
+              types.txt for every type; members.txt for the types you name.
 
         example:
-          dotnet run -- "E:\SPT 4.1\EscapeFromTarkov_Data\Managed\Assembly-CSharp.dll" TarkovApplication LampController
+          dotnet run -- --scan "E:\SPT 4.1"
+          dotnet run -- "E:\SPT 4.1\SPT_Runtime\EscapeFromTarkov_Data\Managed\Assembly-CSharp.dll" TarkovApplication
         """);
     return 1;
+}
+
+// --- scan -------------------------------------------------------------------------
+//
+// An SPT install can hold more than one Assembly-CSharp.dll, and only one of them is
+// the one SPT patched. Referencing the other compiles against BSG's raw names, where
+// nothing SPT renamed exists and most members are unprintable unicode, so every type
+// the migration tables promise comes back "not found" and the tables look wrong.
+//
+// Telling them apart needs no name list: the raw assembly is full of members whose
+// names are unprintable, and the patched one is not.
+if (args[0] is "--scan")
+{
+    if (args.Length < 2)
+    {
+        Console.Error.WriteLine("usage: dotnet run -- --scan \"<SPT install root>\"");
+        return 1;
+    }
+
+    var root = args[1];
+
+    if (!Directory.Exists(root))
+    {
+        Console.Error.WriteLine($"not a folder: {root}");
+        return 1;
+    }
+
+    var found = Directory.EnumerateFiles(root, "Assembly-CSharp.dll", SearchOption.AllDirectories).ToList();
+
+    if (found.Count == 0)
+    {
+        Console.Error.WriteLine($"no Assembly-CSharp.dll anywhere under {root}");
+        return 1;
+    }
+
+    foreach (var candidate in found)
+    {
+        Console.WriteLine(candidate);
+
+        try
+        {
+            using var s = File.OpenRead(candidate);
+            using var p = new PEReader(s);
+
+            if (!p.HasMetadata)
+            {
+                Console.WriteLine("    not a .NET assembly");
+                continue;
+            }
+
+            var r = p.GetMetadataReader();
+            var total = 0;
+            var unprintable = 0;
+
+            foreach (var th in r.TypeDefinitions)
+            {
+                var td = r.GetTypeDefinition(th);
+
+                foreach (var mh in td.GetMethods())
+                {
+                    total++;
+                    var n = r.GetString(r.GetMethodDefinition(mh).Name);
+
+                    if (n.Length == 0 || n.Any(c => char.IsControl(c) || c > 0x2000))
+                    {
+                        unprintable++;
+                    }
+                }
+            }
+
+            var share = total == 0 ? 0 : unprintable * 100.0 / total;
+
+            Console.WriteLine($"    {r.TypeDefinitions.Count:N0} types, {share:F0}% of methods have unprintable names");
+            Console.WriteLine(share > 5
+                ? "    >>> RAW, still obfuscated. Do NOT build against this one."
+                : "    >>> deobfuscated. This is the one to build against.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"    could not read: {ex.Message}");
+        }
+
+        Console.WriteLine();
+    }
+
+    return 0;
 }
 
 var path = args[0];

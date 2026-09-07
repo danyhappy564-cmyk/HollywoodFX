@@ -144,3 +144,36 @@ Delegate, GDelegate, Exception, GException, GControl, GAttribute, method, smetho
 `TextureDecalsPainter`와 `CorpseRagdoll`에는 그 목록이 아예 없습니다 — 즉
 `method_5` / `method_1`은 **SPT가 건드리지 않습니다.** 남은 변수는 BSG 쪽 번호가
 밀렸는지 뿐이고, 그건 `PatchTarget` 로그로 확인합니다.
+
+**(같은 날 정정 — 빌드 에러의 진짜 원인)**
+
+위의 개명 작업은 **맞았습니다.** 빌드가 깨진 건 다른 이유였습니다 — **참조하던
+`Assembly-CSharp.dll`이 SPT가 손대지 않은 BSG 원본**이었습니다.
+
+`tools/AssemblyDump`로 실제 어셈블리를 덤프해서 확인한 결과 (타입 15,137개):
+
+| 찾은 것 | 개수 |
+| --- | --- |
+| SPT 4.1 역난독화 이름 (`Ammo`, `CorpseRagdoll`, `ShotDelegate`…) | **0** |
+| SPT 4.0 별칭 (`AmmoItemClass`, `RagdollClass`…) | **0** |
+| de4dot 이름 (`GClass####`) | **0** |
+
+SPT의 이름이 4.0 것도 4.1 것도 하나도 없고, 멤버 이름 상당수가 **출력 불가능한
+유니코드**(덤프에 빈칸으로 나옴)였습니다. 원본 난독화 어셈블리라는 뜻입니다.
+
+- **원인은 제가 짠 탐색 순서**입니다. 루트를 먼저 보게 했는데, 4.1은 게임이
+  `SPT_Runtime\` 아래 있습니다. 설치본에 손대지 않은 `EscapeFromTarkov_Data`가
+  루트에도 남아 있으면 **그쪽이 이깁니다.**
+
+  그리고 이건 시끄럽게 실패하지 않습니다. BSG 원본 이름으로 컴파일되니 SPT가 바꾼
+  이름은 전부 "찾을 수 없음"이 되고, **마치 마이그레이션 표가 틀린 것처럼 보입니다.**
+  `TarkovApplication.method_41`과 `LampController.Awake`가 없다고 나온 게 그거였습니다
+  (원본에선 `method_41`이라는 이름 자체가 없고, `Awake`는 private입니다)
+
+- 수정: `SPT_Runtime\` → `SPT\` → 루트 순으로 탐색. 네 가지 배치로 검증했고, 둘 다
+  있을 때 `SPT_Runtime`을 고르는 것까지 확인했습니다. 빌드할 때 어느 걸 골랐는지
+  한 줄 찍습니다
+
+- `AssemblyDump`에 스캔 모드 추가 — 설치본 아래 `Assembly-CSharp.dll`을 전부 찾아서
+  각각이 역난독화된 것인지 판정합니다. 이름 목록 없이도 구분됩니다: 원본은 메서드
+  이름 상당수가 출력 불가능한 문자거든요

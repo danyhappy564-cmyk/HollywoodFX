@@ -17,22 +17,28 @@
     <!--
         Where the game and BepInEx actually are, found rather than assumed.
 
-        4.1 moved the server into an SPT_Runtime\ folder under the install. The game and
-        BepInEx normally stay at the root, because EscapeFromTarkov.exe has to sit beside
-        BepInEx for the loader to attach, but "normally" is not "always" and a wrong guess
-        here shows up as twenty unresolved references rather than one clear message.
+        4.1 puts the game under SPT_Runtime\ (4.0 used SPT\), and an install can end up
+        holding a second, untouched EscapeFromTarkov_Data at the root as well. Only one of
+        the two Assembly-CSharp.dll is the one SPT deobfuscated.
 
-        So probe: the root first, then SPT_Runtime\, keyed on a file that has to be there
-        if that is the right folder. The two are resolved separately because there is no
-        rule that says they move together.
+        Getting that wrong does not fail loudly. It compiles against BSG raw names, where
+        nothing SPT renamed exists and most members are unprintable unicode, so every type
+        the 4.1 migration tables promise comes back "not found" and it reads as though the
+        tables are wrong. That is exactly what happened here.
+
+        So SPT_Runtime\ is checked first, then SPT\, and the bare root only as a last
+        resort. The AssemblyDump tool's scan mode lists which copies exist and which one is
+        actually deobfuscated.
 
         Point GameRoot or BepInExRoot straight at a folder to skip the search.
     -->
     <PropertyGroup>
-        <GameRoot Condition="'$(GameRoot)' == '' And Exists('$(SptRoot)\EscapeFromTarkov_Data\Managed\Assembly-CSharp.dll')">$(SptRoot)</GameRoot>
         <GameRoot Condition="'$(GameRoot)' == '' And Exists('$(SptRoot)\SPT_Runtime\EscapeFromTarkov_Data\Managed\Assembly-CSharp.dll')">$(SptRoot)\SPT_Runtime</GameRoot>
+        <GameRoot Condition="'$(GameRoot)' == '' And Exists('$(SptRoot)\SPT\EscapeFromTarkov_Data\Managed\Assembly-CSharp.dll')">$(SptRoot)\SPT</GameRoot>
+        <GameRoot Condition="'$(GameRoot)' == '' And Exists('$(SptRoot)\EscapeFromTarkov_Data\Managed\Assembly-CSharp.dll')">$(SptRoot)</GameRoot>
         <GameRoot Condition="'$(GameRoot)' == ''">$(SptRoot)</GameRoot>
 
+        <BepInExRoot Condition="'$(BepInExRoot)' == '' And Exists('$(GameRoot)\BepInEx\core\BepInEx.dll')">$(GameRoot)</BepInExRoot>
         <BepInExRoot Condition="'$(BepInExRoot)' == '' And Exists('$(SptRoot)\BepInEx\core\BepInEx.dll')">$(SptRoot)</BepInExRoot>
         <BepInExRoot Condition="'$(BepInExRoot)' == '' And Exists('$(SptRoot)\SPT_Runtime\BepInEx\core\BepInEx.dll')">$(SptRoot)\SPT_Runtime</BepInExRoot>
         <BepInExRoot Condition="'$(BepInExRoot)' == ''">$(GameRoot)</BepInExRoot>
@@ -49,6 +55,7 @@
         not one bad reference.
     -->
     <Target Name="ValidateSptRoot" BeforeTargets="BeforeBuild">
+        <Message Importance="high" Text="$(MSBuildProjectName): building against $(GameManaged)" />
         <Error Condition="!Exists('$(GameManaged)\Assembly-CSharp.dll')"
                Text="No Assembly-CSharp.dll under '$(GameManaged)'. SptRoot is '$(SptRoot)'; looked there and under SPT_Runtime\. Build with -p:SptRoot=&lt;your SPT install root&gt;, or -p:GameRoot=&lt;the folder holding EscapeFromTarkov_Data&gt;." />
         <Error Condition="!Exists('$(BepInExCore)\BepInEx.dll')"
