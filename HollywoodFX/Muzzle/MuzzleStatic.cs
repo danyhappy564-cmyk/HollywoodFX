@@ -33,19 +33,23 @@ internal class MuzzleStatic
     public readonly CurrentShot CurrentShot = new();
     private readonly Dictionary<int, MuzzleState> _muzzleStates = new();
 
-    // Not renamed by the deobfuscator, which only touches fields whose names start with
-    // one of the obfuscator's prefixes, and "muzzle" is not one. Resolved through
-    // ObfuscatedField anyway: it takes the name when the name still works, matches on the
-    // array type if it ever stops, and leaves the muzzle plain rather than throwing on
-    // every shot if neither does.
+    // 4.1 names, read off the assembly rather than guessed: muzzleJet_0 is __muzzleJets
+    // (two underscores, since a GameObject[] _muzzleJets sits beside it), muzzleFume_0 is
+    // _muzzleFumes and muzzleSmoke_0 is _muzzleSmokes.
+    //
+    // Still resolved through ObfuscatedField for the fallback, but note the asymmetry:
+    // jets and smokes are the only field of their array type, so type matching would find
+    // them on its own. Fumes are not. MuzzleManager holds both _muzzleFumes and
+    // _launcherFumes as MuzzleFume[], so if that name ever moves the type cannot pick
+    // between them and ObfuscatedField will say so rather than guess.
     private static readonly FieldInfo JetField =
-        ObfuscatedField.Find(typeof(MuzzleManager), typeof(MuzzleJet[]), "muzzleJet_0");
+        ObfuscatedField.Find(typeof(MuzzleManager), typeof(MuzzleJet[]), "__muzzleJets");
 
     private static readonly FieldInfo FumeField =
-        ObfuscatedField.Find(typeof(MuzzleManager), typeof(MuzzleFume[]), "muzzleFume_0");
+        ObfuscatedField.Find(typeof(MuzzleManager), typeof(MuzzleFume[]), "_muzzleFumes");
 
     private static readonly FieldInfo SmokeField =
-        ObfuscatedField.Find(typeof(MuzzleManager), typeof(MuzzleSmoke[]), "muzzleSmoke_0");
+        ObfuscatedField.Find(typeof(MuzzleManager), typeof(MuzzleSmoke[]), "_muzzleSmokes");
 
     public bool TryGetMuzzleState(MuzzleManager manager, out MuzzleState state)
     {

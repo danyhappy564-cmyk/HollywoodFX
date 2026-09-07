@@ -30,10 +30,11 @@ public class ShotDelegateWrapperPatch : ModulePatch
         
         Plugin.Log.LogInfo("Getting the shot delegate field from BallisticsCalculator");
 
-        // "gdelegate64_0" was the obfuscator naming the field after its type, and that
-        // type is ShotDelegate now. See ObfuscatedField.
+        // gdelegate64_0 in 4.0, when the type was GDelegate64. Both moved together: the
+        // type is ShotDelegate and the field is _shotDelegate, and it is the only field of
+        // that type on BallisticsCalculator, so the fallback would find it either way.
         var shotDelegateField = ObfuscatedField.Find(
-            typeof(BallisticsCalculator), typeof(ShotDelegate), "gdelegate64_0");
+            typeof(BallisticsCalculator), typeof(ShotDelegate), "_shotDelegate");
 
         if (shotDelegateField == null)
         {

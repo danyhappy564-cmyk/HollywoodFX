@@ -163,10 +163,10 @@ internal class TracerImpactEffects
         _impacts[(int)MaterialType.GenericHard] = new TracerImpact(lowFlammable, 0.35f, 0.5f);
         _impacts[(int)MaterialType.MetalNoDecal] = new TracerImpact(lowFlammable, 0.45f, 0.6f);
 
-        // "lightAllocationPoolClass" was the obfuscator naming the field after its type,
-        // and that type is LightPool now. See ObfuscatedField.
+        // lightAllocationPoolClass in 4.0, _lightPool now, and the only LightPool on
+        // Effects, so the type fallback covers it too. See ObfuscatedField.
         _lightPool = (LightPool)ObfuscatedField
-            .Find(typeof(Effects), typeof(LightPool), "lightAllocationPoolClass")
+            .Find(typeof(Effects), typeof(LightPool), "_lightPool")
             ?.GetValue(eftEffects);
     }
 

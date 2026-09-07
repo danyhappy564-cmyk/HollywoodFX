@@ -207,3 +207,25 @@ SPT 공식 위키 [Client Modding Quick Guide] Step 1-5:
 
 `ObfuscatedField`는 남깁니다. 이름 힌트를 새 이름으로 갱신했고, 이름이 또 움직이면
 타입으로 찾는 폴백이 그대로 받아줍니다.
+
+**(같은 날 — 리플렉션 필드 이름 확정, 빌드 통과)**
+
+빌드가 통과했습니다. 남아 있던 건 컴파일이 아니라 **런타임에만 드러나는** 문자열
+리플렉션 필드들이라, 어셈블리에서 실제 이름을 읽어 채워 넣었습니다:
+
+| 4.0 | 4.1 | 타입만으로 찾을 수 있나 |
+| --- | --- | --- |
+| `BallisticsCalculator.gdelegate64_0` | `_shotDelegate` | ✅ 유일한 `ShotDelegate` |
+| `Effects.lightAllocationPoolClass` | `_lightPool` | ✅ 유일한 `LightPool` |
+| `MuzzleManager.muzzleJet_0` | `__muzzleJets` (밑줄 **두 개**) | ✅ 유일한 `MuzzleJet[]` |
+| `MuzzleManager.muzzleSmoke_0` | `_muzzleSmokes` | ✅ 유일한 `MuzzleSmoke[]` |
+| `MuzzleManager.muzzleFume_0` | `_muzzleFumes` | ❌ **`_launcherFumes`와 타입이 같음** |
+
+마지막 줄이 이 덤프의 값어치입니다. `MuzzleManager`에는 `MuzzleFume[]` 필드가 둘
+(`_muzzleFumes`, `_launcherFumes`) 있어서, 이 이름이 언젠가 또 움직이면 **타입 폴백이
+둘 중 하나를 고를 수 없습니다.** 그때 `ObfuscatedField`는 찍지 않고 "타입으로도 특정
+불가"라고 로그를 남기고 총구 이펙트만 끕니다 — 잘못 골라서 조용히 이상하게 도는 것보다
+낫습니다.
+
+`__muzzleJets`의 밑줄 두 개도 짚어둡니다. 옆에 `GameObject[] _muzzleJets`가 따로 있어서
+밑줄 하나로 적으면 타입이 달라 조용히 어긋납니다.
