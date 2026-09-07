@@ -14,11 +14,8 @@ class TextureDecalsPainterVisCheckPatch : ModulePatch
 {
     protected override MethodBase GetTargetMethod()
     {
-        // Numbered, so logged. See PatchTarget.
-        return PatchTarget.Numbered(
-            typeof(TextureDecalsPainter),
-            nameof(TextureDecalsPainter.method_5),
-            "bool method_5(Renderer objRenderer)");
+        // Was method_5(Renderer) until 4.1 gave it a name.
+        return typeof(TextureDecalsPainter).GetMethod(nameof(TextureDecalsPainter.IsCorrectRenderer));
     }
 
     [PatchPrefix]

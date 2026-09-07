@@ -183,3 +183,27 @@ SPT 공식 위키 [Client Modding Quick Guide] Step 1-5:
   자체 런처·서버·user 폴더용이고 `EscapeFromTarkov.exe`는 거기 없습니다. 한때 이걸
   잘못 읽고 `SPT_Runtime`을 먼저 보게 했던 것을 되돌렸습니다 — 루트 우선, 나머지는
   폴백입니다
+
+**(같은 날 — 남은 멤버 이름 확정)**
+
+역난독화된 어셈블리를 덤프해서 **시그니처로 짝을 맞춰** 남은 9개를 전부 해결했습니다.
+번호가 밀린 게 맞았고, 이름이 아니라 **모양**으로 찾으면 확정됩니다:
+
+| 4.0 | 4.1 | 근거 |
+| --- | --- | --- |
+| `TextureDecalsPainter.method_5` | `IsCorrectRenderer` | `bool (Renderer)` 유일 |
+| `CorpseRagdoll.method_1` | `StopRigidbody` | `void (Rigidbody)` 유일 |
+| `CorpseRagdoll.Func_0` | `_checkCorpseIsStill` | `Func<bool, float, bool>` 유일 |
+| `CorpseRagdoll.RigidbodySpawner_0` | `_rigidbodySpawners` | `RigidbodySpawner[]` 유일 |
+| `DeferredDecalRenderer.method_6` | `AddCubeToMesh` | `void (Vector3, Vector3, ManagedMesh, SingleDecal, float)` |
+| `DeferredDecalRenderer.method_7` | `CreateDecalMesh` | `void (SingleDecal)` 유일 |
+| `DeferredDecalRenderer.dictionary_0` | `_meshesDict` | `Dictionary<Material, ManagedMesh>` |
+| `DeferredDecalRenderer.dictionary_2` | `_cameras` | `Dictionary<Camera, CameraData>` |
+| `Firearms.FirearmsEffects_0` | `FirearmsEffects` (속성) | |
+
+이제 전부 **진짜 이름**이라 다음에 없어지면 컴파일 에러로 잡힙니다. 번호 붙은 대상이
+하나도 안 남아서 `PatchTarget`(로그로 감시하던 장치)은 삭제했습니다 — 감시할 게
+없으면 감시 코드도 없는 게 맞습니다.
+
+`ObfuscatedField`는 남깁니다. 이름 힌트를 새 이름으로 갱신했고, 이름이 또 움직이면
+타입으로 찾는 폴백이 그대로 받아줍니다.

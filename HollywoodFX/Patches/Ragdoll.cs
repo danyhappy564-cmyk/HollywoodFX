@@ -100,7 +100,8 @@ internal class RagdollStartPrefixPatch : ModulePatch
     // ReSharper disable InconsistentNaming
     public static void Prefix(CorpseRagdoll __instance)
     {
-        __instance.Func_0 = CheckCorpseIsStill;
+        // Func`3<bool, float, bool> _checkCorpseIsStill; was Func_0 before 4.1 named it.
+        __instance._checkCorpseIsStill = CheckCorpseIsStill;
     }
 
     private static bool CheckCorpseIsStill(bool sleeping, float timePassed)
@@ -133,11 +134,9 @@ internal class RagdollM1PostfixPatch : ModulePatch
 {
     protected override MethodBase GetTargetMethod()
     {
-        // Numbered, so logged. See PatchTarget.
-        return PatchTarget.Numbered(
-            typeof(CorpseRagdoll),
-            nameof(CorpseRagdoll.method_1),
-            "method_1(Rigidbody rigidbody)");
+        // Was method_1(Rigidbody) until 4.1 gave it a name, which means a rename from
+        // here on is a compile error rather than something to watch a log for.
+        return typeof(CorpseRagdoll).GetMethod(nameof(CorpseRagdoll.StopRigidbody));
     }
 
     [PatchPrefix]
@@ -159,7 +158,7 @@ internal class RagdollStartPostfixPatch : ModulePatch
     // ReSharper disable InconsistentNaming
     public static void Postfix(CorpseRagdoll __instance)
     {
-        foreach (var spawner in __instance.RigidbodySpawner_0)
+        foreach (var spawner in __instance._rigidbodySpawners)
         {
             spawner.Rigidbody.maxDepenetrationVelocity = 1f;
         }

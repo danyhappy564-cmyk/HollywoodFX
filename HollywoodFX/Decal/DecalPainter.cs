@@ -16,20 +16,21 @@ public class DecalPainter
     public DecalPainter(DeferredDecalRenderer renderer)
     {
         _renderer = renderer;
-        // dictionary_0 and dictionary_2 are the obfuscator counting, so the numbers move.
-        // What does not move is what each one holds, and after 4.1 deobfuscated those
-        // (ManagedMesh, CameraData) the value type tells the two apart on its own.
-        // See ObfuscatedField.
+        // These were dictionary_0 and dictionary_2, the obfuscator counting. 4.1 named
+        // them _meshesDict and _cameras. Still resolved through ObfuscatedField, which
+        // falls back to matching on the value type, since that is what told the two apart
+        // when the names were numbers and is what will again if they move. See
+        // ObfuscatedField.
         _dictionary0 = (Dictionary<Material, DeferredDecalRenderer.ManagedMesh>)ObfuscatedField
             .Find(typeof(DeferredDecalRenderer),
                   typeof(Dictionary<Material, DeferredDecalRenderer.ManagedMesh>),
-                  "dictionary_0")
+                  "_meshesDict")
             ?.GetValue(_renderer);
 
         _dictionary2 = (Dictionary<Camera, DeferredDecalRenderer.CameraData>)ObfuscatedField
             .Find(typeof(DeferredDecalRenderer),
                   typeof(Dictionary<Camera, DeferredDecalRenderer.CameraData>),
-                  "dictionary_2")
+                  "_cameras")
             ?.GetValue(_renderer);
     }
 
@@ -50,8 +51,8 @@ public class DecalPainter
         {
             foreach (var keyValuePair in _dictionary2)
                 keyValuePair.Value.IsStaticBufferDirty = true;
-            _renderer.method_7(decal);
+            _renderer.CreateDecalMesh(decal);
         }
-        _renderer.method_6(position, normal, _dictionary0[decal.DecalMaterial], decal, projectorHeight);
+        _renderer.AddCubeToMesh(position, normal, _dictionary0[decal.DecalMaterial], decal, projectorHeight);
     }
 }
